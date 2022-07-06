@@ -122,6 +122,12 @@ class ALeRCEQueryForm(GenericQueryForm):
         coerce=int,
         label='Maximum pages to retrieve'
     )
+    page_size = forms.IntegerField(
+        initial=20,
+        required=False,
+        label='Alerts per page',
+        min_value=1
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -181,7 +187,8 @@ class ALeRCEQueryForm(GenericQueryForm):
                     Column('order_mode'),
                 ),
                 Row(
-                    Column('max_pages')
+                    Column('max_pages'),
+                    Column('page_size')
                 )
             ),
         )
