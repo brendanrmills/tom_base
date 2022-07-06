@@ -6,11 +6,12 @@ from django import forms
 from tom_alerts.alerts import GenericQueryForm, GenericAlert, GenericBroker
 from tom_targets.models import Target
 
-LASAIR_URL = 'https://lasair.roe.ac.uk'
+LASAIR_URL = 'https://lasair-ztf.lsst.ac.uk/api'
 
 
 class LasairBrokerForm(GenericQueryForm):
-    cone = forms.CharField(required=False, label='Object Cone Search', help_text='Object RA and Dec')
+    objectId = forms.CharField(required=False, label='Object ID(s)', help_text='ZTF object ID or comma separated list')
+    # cone = forms.CharField(required=False, label='Object Cone Search', help_text='Object RA and Dec')
     sqlquery = forms.CharField(required=False, label='Freeform SQL query', help_text='SQL query')
 
     def __init__(self, *args, **kwargs):
@@ -24,7 +25,8 @@ class LasairBrokerForm(GenericQueryForm):
             self.common_layout,
             Fieldset(
                 None,
-                'cone',
+                # 'cone',
+                'objectId',
                 'sqlquery'
             ),
         )
