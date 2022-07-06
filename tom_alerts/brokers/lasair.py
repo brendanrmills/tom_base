@@ -1,6 +1,6 @@
 import requests
 from urllib.parse import urlencode
-from crispy_forms.layout import Fieldset, HTML, Layout
+from crispy_forms.layout import Column, Fieldset, HTML, Layout, Row
 from django import forms
 
 from tom_alerts.alerts import GenericQueryForm, GenericAlert, GenericBroker
@@ -13,31 +13,64 @@ LASAIR_URL = 'https://lasair-ztf.lsst.ac.uk/api'
 class LasairBrokerForm(GenericQueryForm):
     objectId = forms.CharField(required=False, label='Object ID(s)', help_text='ZTF object ID or comma separated list')
     # cone = forms.CharField(required=False, label='Object Cone Search', help_text='Object RA and Dec')
-    sqlquery = forms.CharField(required=False, label='Freeform SQL query', help_text='SQL query')
+    # sqlquery = forms.CharField(required=False, help_text='Make sure you ar eusing proper syntaxt')
+    mjd__gt = forms.FloatField(
+        required=False,
+        label='Min date of last detection',
+        widget=forms.TextInput(attrs={'placeholder': 'Date (MJD)'}),
+        min_value=0.0
+    )
+    mjd__lt = forms.FloatField(
+        required=False,
+        label='Max date of last detection',
+        widget=forms.TextInput(attrs={'placeholder': 'Date (MJD)'}),
+        min_value=0.0
+    )
+    max_alerts = forms.IntegerField(
+        required=False,
+        label='Max number of alerts to return',
+        initial=20,
+        min_value=1
+    )
+
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.helper.layout = Layout(
             HTML('''
                 <p>
-                Please see the <a href="https://lasair.roe.ac.uk/objlist/">Lasair website</a> for more detailed
-                instructions on querying the broker.
+                Make sure you query be one of the methods below. The search function will only query by the first method input. </p>
+                <p>
+                Please see the <a href="https://lasair-ztf.lsst.ac.uk/cookbook/query/">Lasair website</a> for more detailed
+                instructions on querying the broker. 
             '''),
             self.common_layout,
             Fieldset(
-                None,
+                'Object ID Search',
                 # 'cone',
                 'objectId',
-                'sqlquery'
             ),
+            Fieldset(
+                'Date Search',
+                Row(
+                    Column('mjd__gt'),
+                    Column('mjd__lt')
+                ),
+            ),
+            'max_alerts',
+            
+            # Fieldset(
+            #     'Freeform SQL query',
+            #     'sqlquery'
+            # )
         )
 
     def clean(self):
         cleaned_data = super().clean()
 
         # Ensure that either cone search or sqlquery are populated
-        if not (cleaned_data['objectId'] or cleaned_data['sqlquery']):
-            raise forms.ValidationError('One of either Object Cone Search or Freeform SQL Query must be populated.')
+        if not (cleaned_data['objectId'] or cleaned_data['sqlquery'] or (cleaned_data['mjd__gt'] and cleaned_data['mjd__lt'])):
+            raise forms.ValidationError('One of the required query methods must be populated.')
 
         return cleaned_data
 
@@ -81,7 +114,6 @@ class LasairBroker(GenericBroker):
     form = LasairBrokerForm
 
     def fetch_alerts(self, parameters):
-        print(parameters)
         # if 'cone' in parameters and len(parameters['cone'].strip()) > 0:
         #     response = requests.post(
         #         LASAIR_URL + '/conesearch/',
@@ -108,17 +140,32 @@ class LasairBroker(GenericBroker):
             alerts = response.json()
             return iter(alerts)
 
-        # note: the sql SELECT must include objectId
-        if 'sqlquery' in parameters and len(parameters['sqlquery'].strip()) > 0:
-            response = requests.post(
-                LASAIR_URL + '/objlist/',
-                data={'sqlquery': parameters['sqlquery'], 'json': 'on', 'page': ''}
-            )
-            records = response.json()
-            alerts = []
-            for record in records:
-                alerts.append(get_lasair_object(record['objectId']))
-            return iter(alerts)
+        if 'mjd__gt' in parameters and 'mjd__lt' in parameters:
+            query = {
+                'selected': 'objects.objectId, objects.ramean, objects.decmean, objects.jdmax, sherlock_classifications.classification, sherlock_classifications.classificationReliability',
+                "token":"1ce34af3a313684e90eb86ccc22565ae33434e0f",
+                'tables': 'objects, sherlock_classifications',
+                'conditions': f'objects.jdmax>{ parameters["mjd__gt"] + 2400000 } AND objects.jdmax<{parameters["mjd__lt"] + 2400000}',
+                'limit': parameters.get('max_alerts',20),
+                'offset': parameters.get('offset', 0),
+                'format': 'json',
+            }
+            url = LASAIR_URL + '/query/?' + urlencode(query)
+            response = requests.get(url)
+            response.raise_for_status()
+            parsed = response.json()
+            return iter(parsed)
+
+        # if 'sqlquery' in parameters and len(parameters['sqlquery'].strip()) > 0:
+        #     response = requests.post(
+        #         LASAIR_URL + '/objlist/',
+        #         data={'sqlquery': parameters['sqlquery'], 'json': 'on', 'page': ''}
+        #     )
+        #     records = response.json()
+        #     alerts = []
+        #     for record in records:
+        #         alerts.append(get_lasair_object(record['objectId']))
+        #     return iter(alerts)
 
     def fetch_alert(self, alert_id):
         url = LASAIR_URL + '/object/' + alert_id + '/json/'
@@ -131,17 +178,28 @@ class LasairBroker(GenericBroker):
         pass
 
     def to_generic_alert(self, alert):
-        name = alert['objectId']
-        return GenericAlert(
-            url=f'https://lasair-ztf.lsst.ac.uk/object/{name}/',
-            id=alert['objectId'],
-            name=alert['objectId'],
-            ra=alert['objectData']['ramean'],
-            dec=alert['objectData']['decmean'],
-            timestamp=alert['objectData']['jdmax']-2400000,
-            mag=alert['candidates'][0]['magpsf'],
-            score=1,  # dunno what this means ..?
-        )
+        try:
+            return GenericAlert(
+                url=f'https://lasair-ztf.lsst.ac.uk/object/{alert["objectId"]}/',
+                id=alert['objectId'],
+                name=alert['objectId'],
+                ra=alert['ramean'],
+                dec=alert['decmean'],
+                timestamp=alert['jdmax']-2400000,
+                mag=-999,
+                score=1,  # dunno what this means ..?
+            )
+        except:
+            return GenericAlert(
+                url=f'https://lasair-ztf.lsst.ac.uk/object/{alert["objectId"]}/',
+                id=alert['objectId'],
+                name=alert['objectId'],
+                ra=alert['objectData']['ramean'],
+                dec=alert['objectData']['decmean'],
+                timestamp=alert['objectData']['jdmax']-2400000,
+                mag=alert['candidates'][0]['magpsf'],
+                score=1,  # dunno what this means ..?
+            )
 
     def to_target(self, alert):
         for c in alert['candidates']:
