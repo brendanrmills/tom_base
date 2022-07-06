@@ -294,7 +294,7 @@ class ALeRCEBroker(GenericBroker):
 
         payload += [
             ('page', parameters.get('page', 1)),
-            ('page_size', 20),
+            ('page_size', parameters.get('page_size', 20)),
         ]
 
         payload += self._clean_classifier_parameters(parameters)
@@ -307,7 +307,7 @@ class ALeRCEBroker(GenericBroker):
 
     def _request_alerts(self, parameters):
         payload = self._clean_parameters(parameters)
-        logger.log(msg=f'Fetching alerts from ALeRCE with payload {payload}', level=logging.INFO)
+        logger.log(msg=f'Fetching alerts from ALeRCE with payload {payload}', level=logging.DEBUG)
         args = urlencode(self._clean_parameters(parameters))
         response = requests.get(f'{ALERCE_SEARCH_URL}/objects/?count=false&{args}')
         response.raise_for_status()
