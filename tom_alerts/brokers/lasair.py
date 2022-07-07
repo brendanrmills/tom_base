@@ -79,7 +79,7 @@ class LasairBrokerForm(GenericQueryForm):
 # def get_lasair_object(objectId):
 #     query = {
 #             'limit': 1,
-#             "token":"1ce34af3a313684e90eb86ccc22565ae33434e0f", #this is my personal brendan mills token idk how we can make this general
+#             "token":, #this is my personal brendan mills token idk how we can make this general
 #             'objectIds': objectId,
 #             'format': 'json',
 #     }
