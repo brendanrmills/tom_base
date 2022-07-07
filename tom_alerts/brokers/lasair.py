@@ -2,6 +2,7 @@ import requests
 from urllib.parse import urlencode
 from crispy_forms.layout import Column, Fieldset, HTML, Layout, Row
 from django import forms
+from django.conf import settings
 
 from tom_alerts.alerts import GenericQueryForm, GenericAlert, GenericBroker
 from tom_targets.models import Target
@@ -75,33 +76,33 @@ class LasairBrokerForm(GenericQueryForm):
         return cleaned_data
 
 
-def get_lasair_object(objectId):
-    query = {
-            'limit': 1,
-            "token":"1ce34af3a313684e90eb86ccc22565ae33434e0f", #this is my personal brendan mills token idk how we can make this general
-            'objectIds': objectId,
-            'format': 'json',
-    }
-    url = LASAIR_URL + '/objects/?' + urlencode(query)
-    response = requests.get(url)
-    response.raise_for_status()
-    obj = response.json()[0]
+# def get_lasair_object(objectId):
+#     query = {
+#             'limit': 1,
+#             "token":"1ce34af3a313684e90eb86ccc22565ae33434e0f", #this is my personal brendan mills token idk how we can make this general
+#             'objectIds': objectId,
+#             'format': 'json',
+#     }
+#     url = LASAIR_URL + '/objects/?' + urlencode(query)
+#     response = requests.get(url)
+#     response.raise_for_status()
+#     obj = response.json()[0]
 
-    mjdmax = obj['objectData']['jdmax']-2400000
-    ra = obj['objectData']['ramean']
-    dec = obj['objectData']['decmean']
-    glon = obj['objectData']['glonmean']
-    glat = obj['objectData']['glatmean']
-    magpsf = obj['candidates'][0]['magpsf']
-    return {
-        'alert_id': objectId,
-        'mjd': mjdmax,
-        'ra': ra,
-        'dec': dec,
-        'galactic_lng': glon,
-        'galactic_lat': glat,
-        'mag': magpsf
-    }
+#     mjdmax = obj['objectData']['jdmax']-2400000
+#     ra = obj['objectData']['ramean']
+#     dec = obj['objectData']['decmean']
+#     glon = obj['objectData']['glonmean']
+#     glat = obj['objectData']['glatmean']
+#     magpsf = obj['candidates'][0]['magpsf']
+#     return {
+#         'alert_id': objectId,
+#         'mjd': mjdmax,
+#         'ra': ra,
+#         'dec': dec,
+#         'galactic_lng': glon,
+#         'galactic_lat': glat,
+#         'mag': magpsf
+#     }
 
 
 class LasairBroker(GenericBroker):
@@ -130,7 +131,7 @@ class LasairBroker(GenericBroker):
         if 'objectId' in parameters and len(parameters['objectId'].strip()) > 0:
             query = {
             'limit': 1,
-            "token":"1ce34af3a313684e90eb86ccc22565ae33434e0f", #this is my personal brendan mills token idk how we can make this general
+            'token': settings.BROKER['Lasair'],
             'objectIds': parameters['objectId'],
             'format': 'json',
             }
