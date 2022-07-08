@@ -10,6 +10,7 @@ from django.db.models import Q
 from guardian.shortcuts import get_objects_for_user
 import numpy as np
 from plotly import offline
+from plotly.subplots import make_subplots
 from plotly import graph_objs as go
 
 from tom_observations.utils import get_sidereal_visibility
@@ -218,6 +219,40 @@ def moon_distance(target, day_range=30, width=600, height=400, background=None, 
     )
 
     return {'plot': moon_distance_plot}
+
+@register.inclusion_tag('tom_targets/partials/classif_plot.html')
+def classif_plot(target, day_range=30, width=600, height=400, background=None, label_color=None, grid=True):
+    """
+    Displays the classification data for a target
+    """
+    tcs = target.targetclassification_set.all()
+    alerce_stamp = []
+    alerce_probs = []
+    lasair_cats = ['SN', 'AGN', 'VS',  'NT', 'CV', 'BS', 'UNCLEAR']
+    lasair_probs = [0,0,0,0,0,0,0]
+    for tc in tcs:
+        if tc.level == 'stamp_classifier':
+            alerce_stamp.append(tc.classification)
+            alerce_probs.append(tc.probability)
+        if tc.source == 'Lasair' and tc.classification in lasair_cats:
+            lasair_probs[lasair_cats.index(tc.classification)] = 1
+
+    fig = make_subplots(2,1,
+        subplot_titles=('ALeRCE', 'Lasair')
+    )
+    fig.add_trace(
+        go.Bar(x=alerce_stamp, y=alerce_probs) , 1,1
+    )
+    fig.add_trace(
+        go.Bar(x=lasair_cats, y=lasair_probs) , 2,1
+    )
+    fig.update_layout(showlegend=False, title_text="Broker Classifications")
+
+    plot_out = offline.plot(
+        fig, output_type='div', show_link=False
+    )
+
+    return {'plot': plot_out}
 
 
 @register.inclusion_tag('tom_targets/partials/target_distribution.html')

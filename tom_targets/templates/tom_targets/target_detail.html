@@ -103,11 +103,7 @@ $(document).ready(function(){
       </div>
       <div class="tab-pane active" id="classifications">
         <h4>Classifications</h4>
-        {% if object.type == 'SIDEREAL' %}
-          {% moon_distance object %}
-        {% elif target.type == 'NON_SIDEREAL' %}
-          <p>Airmass plotting for non-sidereal targets is not currently supported. If you would like to add this functionality, please check out the <a href="https://github.com/TOMToolkit/tom_nonsidereal_airmass" target="_blank">non-sidereal airmass plugin.</a></p>
-        {% endif %}
+        {% classif_plot object %}
       </div>
       {% comments_enabled as comments_are_enabled %}
       <hr/>
