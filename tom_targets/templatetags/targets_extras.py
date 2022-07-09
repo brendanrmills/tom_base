@@ -221,32 +221,52 @@ def moon_distance(target, day_range=30, width=600, height=400, background=None, 
     return {'plot': moon_distance_plot}
 
 @register.inclusion_tag('tom_targets/partials/classif_plot.html')
-def classif_plot(target, day_range=30, width=600, height=400, background=None, label_color=None, grid=True):
+def classif_plot(target, width=700, height=700, background=None, label_color=None, grid=True):
     """
     Displays the classification data for a target
     """
     tcs = target.targetclassification_set.all()
-    alerce_stamp = []
-    alerce_probs = []
-    lasair_cats = ['SN', 'AGN', 'VS',  'NT', 'CV', 'BS', 'UNCLEAR']
-    lasair_probs = [0,0,0,0,0,0,0]
+    alerce_stamp_cats = []
+    alerce_stamp_probs = []
+    alerce_stamp_widths = []
+    stamp_table = [
+        ['bogus', 'asteroid', 'SN', 'AGN', 'VS'],
+        ['Bogus', 'Asteroid', 'SNII', 'Quasar', 'RR Lyrae'],
+        [1,1,5,3,5]
+    ]
     for tc in tcs:
         if tc.level == 'stamp_classifier':
-            alerce_stamp.append(tc.classification)
-            alerce_probs.append(tc.probability)
-        if tc.source == 'Lasair' and tc.classification in lasair_cats:
-            lasair_probs[lasair_cats.index(tc.classification)] = 1
+            try:
+                i = stamp_table[0].index(tc.classification)
+                alerce_stamp_cats.append(stamp_table[1][i])
+                alerce_stamp_widths.append(stamp_table[2][i])
+                alerce_stamp_probs.append(tc.probability)
+            except:
+                pass
+    objs = ['Bogus', 'Asteroid', 'Microlensing', 'Eclipsing Binary', 'Rotating', 'YSO', 'CV/Nova', 'SNIa', 'SNIb/c', 'SNII', 'SLSN', 'SN Other', 'Blasar', 'Quasar', 'AGN Other', 'LPV', 'Cepheid', 'RR Lyrae', 'del Scuti', 'Pulsating Other', 'Unknown']
 
-    fig = make_subplots(2,1,
-        subplot_titles=('ALeRCE', 'Lasair')
+    fig = go.Figure(go.Barpolar(
+        r=alerce_stamp_probs,
+        theta=alerce_stamp_cats,
+        width=alerce_stamp_widths,
+        # marker_color=["#E4FF87", '#709BFF', '#709BFF', '#FFAA70', '#FFAA70'],
+        marker_line_color="black",
+        marker_line_width=2,
+        opacity=0.8
+        ))
+    fig.update_layout(
+        template=None,
+        height=height,
+        width=width,
+        polar = dict(
+            radialaxis = dict(showticklabels=False, ticks=''),
+            angularaxis = dict(
+                categoryarray=objs,
+                categoryorder='array',
+                showticklabels=True,
+                )
+        )
     )
-    fig.add_trace(
-        go.Bar(x=alerce_stamp, y=alerce_probs) , 1,1
-    )
-    fig.add_trace(
-        go.Bar(x=lasair_cats, y=lasair_probs) , 2,1
-    )
-    fig.update_layout(showlegend=False, title_text="Broker Classifications")
 
     plot_out = offline.plot(
         fig, output_type='div', show_link=False
