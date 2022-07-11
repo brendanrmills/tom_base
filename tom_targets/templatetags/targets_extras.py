@@ -226,40 +226,123 @@ def classif_plot(target, width=700, height=700, background=None, label_color=Non
     Displays the classification data for a target
     """
     tcs = target.targetclassification_set.all()
+    alerce_tcs = tcs.filter(source='ALeRCE')
+    lasair_tcs = tcs.filter(source='Lasair')
+    fink_tcs = tcs.filter(source='Fink')
+
+    objs = ['Bogus', 'Asteroid', 'YSO', 'CV/Nova', 'Microlensing', 'Eclipsing Binary', 'Rotating', 'SNIa', 'SNIb/c', 'SNII', 'SLSN', 'SN Other', 'Blazar', 'Quasar', 'AGN Other', 'LPV', 'Cepheid', 'RR Lyrae', 'del Scuti', 'Pulsating Other', 'Unknown']
+    fig = go.Figure(go.Barpolar(
+        r=[1,1,1,1,1],
+        theta=['Quasar', 'SNII', 'RR Lyrae', 'Bogus', 'Microlensing'],
+        width=[3, 5, 5, 3, 5],
+        marker_color=["#E4FF87", '#709BFF', '#B6FFB4', '#FFAA70', '#FFDF70'],
+        opacity=0.25,
+        hovertext=['AGN Types', 'Supernovae', 'Pulsating', 'Other', 'Extrinisc Variability'],
+        hoverinfo='text'
+    ))
+
     alerce_stamp_cats = []
     alerce_stamp_probs = []
     alerce_stamp_widths = []
     stamp_table = [
-        ['bogus', 'asteroid', 'SN', 'AGN', 'VS'],
-        ['Bogus', 'Asteroid', 'SNII', 'Quasar', 'RR Lyrae'],
-        [1,1,5,3,5]
+        ['bogus', 'asteroid', 'SN', 'AGN', 'VS'],#what the classification is
+        ['Bogus', 'Asteroid', 'SNII', 'Quasar', 'RR Lyrae'],#where to point the bar
+        [1,1,5,3,5]#how thick to make the bar
     ]
-    for tc in tcs:
-        if tc.level == 'stamp_classifier':
-            try:
-                i = stamp_table[0].index(tc.classification)
-                alerce_stamp_cats.append(stamp_table[1][i])
-                alerce_stamp_widths.append(stamp_table[2][i])
-                alerce_stamp_probs.append(tc.probability)
-            except:
-                pass
-    objs = ['Bogus', 'Asteroid', 'Microlensing', 'Eclipsing Binary', 'Rotating', 'YSO', 'CV/Nova', 'SNIa', 'SNIb/c', 'SNII', 'SLSN', 'SN Other', 'Blasar', 'Quasar', 'AGN Other', 'LPV', 'Cepheid', 'RR Lyrae', 'del Scuti', 'Pulsating Other', 'Unknown']
-
-    fig = go.Figure(go.Barpolar(
+    for tc in alerce_tcs.filter(level='stamp_classifier'):
+        try:
+            i = stamp_table[0].index(tc.classification)
+            alerce_stamp_cats.append(stamp_table[1][i])
+            alerce_stamp_widths.append(stamp_table[2][i])
+            alerce_stamp_probs.append(tc.probability)
+        except:
+            pass
+    fig.add_trace(go.Barpolar(#alerce stamp bar chart
+        name='ALeRCE Stamp',
         r=alerce_stamp_probs,
         theta=alerce_stamp_cats,
         width=alerce_stamp_widths,
-        # marker_color=["#E4FF87", '#709BFF', '#709BFF', '#FFAA70', '#FFAA70'],
         marker_line_color="black",
         marker_line_width=2,
-        opacity=0.8
+        opacity=0.8,
+        base=0,
         ))
+
+    bogus_or_asteroid = True
+    if alerce_stamp_probs and alerce_stamp_cats[np.argmax(alerce_stamp_probs)] != 'asteroid' and alerce_stamp_cats[np.argmax(alerce_stamp_probs)] != 'bogus':
+        bogus_or_asteroid = False    #this means it isnt bogus or an asteroid
+        #this next section picks out from hte top classifier whether it is periodic, stochastic or transient
+        lc_top= ''
+        lc_top_prob = 0
+        for tc in tcs.filter(level='lc_classifier_top'):
+            if tc.probability > lc_top_prob:
+                lc_top = tc.classification
+                lc_top_prob = tc.probability
+        alerce_lc_cats = []
+        alerce_lc_probs = []
+        lc_table = [
+            ['E', 'DSCT', 'RRL', 'CEP', 'QSO', 'AGN', 'SNIbc', 'Periodic-Other'],#what the classification is
+            ['Eclipsing Binary', 'del Scuti', 'RR Lyrae', 'Cepheid', 'Quasar', 'AGN Other', 'SNIb/c', 'Pulsating Other'],#where to point the bar
+        ]
+        for tc in tcs.filter(level='lc_classifier'):
+            try:
+                i = lc_table[0].index(tc.classification)
+                alerce_lc_cats.append(lc_table[1][i])
+                alerce_lc_probs.append(tc.probability)
+            except:
+                alerce_lc_cats.append(tc.classification)
+                alerce_lc_probs.append(tc.probability)
+        fig.add_trace(go.Scatterpolar(
+            name='ALeRCE LC',
+            r=alerce_lc_probs,
+            theta=alerce_lc_cats,
+            marker_line_color="black",
+            marker_line_width=2,
+            opacity=0.8,
+            
+        ))
+    #delas with lasair
+    if lasair_tcs:#checks to make sure there are lasair classifications
+        tc = lasair_tcs[len(lasair_tcs)-1]
+        las_cat = ''
+        las_prob = 0
+        lasair_table=[#table of equivs
+            ['VS', 'CV', 'SN', 'ORPHAN', 'AGN', 'NT'],
+            ['RR Lyrae', 'CV/Nova', 'SNII', 'Unknown', 'Quasar', 'AGN Other'],
+            [5, 1, 5, 1, 3, 1],
+        ]
+        try:
+            i = lasair_table[0].index(tc.classification)
+            las_cat = lasair_table[1][i]
+            las_prob = tc.probability
+            las_width = lasair_table[2][i]
+        except:
+            las_width = 0
+        fig.add_trace(go.Barpolar(
+            name="Lasair",
+            r=[las_prob],
+            theta=[las_cat],
+            width=[las_width],
+            marker_line_width=2,
+            marker_line_color='green',
+            marker_color='#FFFFFF',
+            opacity=0.5,
+            base=0,
+            hovertext=['Lasair: ' + tc.classification],
+            hoverinfo='text',
+        ))
+    
+    #deals with fink,
+    
+
+
+
     fig.update_layout(
         template=None,
         height=height,
         width=width,
         polar = dict(
-            radialaxis = dict(showticklabels=False, ticks=''),
+            # radialaxis = dict(showticklabels=False, ticks=''),
             angularaxis = dict(
                 categoryarray=objs,
                 categoryorder='array',
@@ -273,7 +356,6 @@ def classif_plot(target, width=700, height=700, background=None, label_color=Non
     )
 
     return {'plot': plot_out}
-
 
 @register.inclusion_tag('tom_targets/partials/target_distribution.html')
 def target_distribution(targets):
