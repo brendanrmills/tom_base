@@ -230,17 +230,46 @@ def classif_plot(target, width=700, height=700, background=None, label_color=Non
     lasair_tcs = tcs.filter(source='Lasair')
     fink_tcs = tcs.filter(source='Fink')
 
-    objs = ['Bogus', 'Asteroid', 'YSO', 'CV/Nova', 'Microlensing', 'Eclipsing Binary', 'Rotating', 'SNIa', 'SNIb/c', 'SNII', 'SLSN', 'SN Other', 'Blazar', 'Quasar', 'AGN Other', 'LPV', 'Cepheid', 'RR Lyrae', 'del Scuti', 'Pulsating Other', 'Unknown']
+    objs = ['Bogus', 'Asteroid', 'Solar System Object', 'YSO', 'CV/Nova', 'Microlensing', 'Eclipsing Binary', 'Rotating', 'SNIa', 'SNIb/c', 'SNII', 'SLSN', 'SN Other', 'Blazar', 'Quasar', 'AGN Other', 'LPV', 'Cepheid', 'RR Lyrae', 'del Scuti', 'Pulsating Other', 'Other', 'Unknown']
     fig = go.Figure(go.Barpolar(
         r=[1,1,1,1,1],
         theta=['Quasar', 'SNII', 'RR Lyrae', 'Bogus', 'Microlensing'],
-        width=[3, 5, 5, 3, 5],
+        width=[3, 5, 5, 5, 5],
         marker_color=["#E4FF87", '#709BFF', '#B6FFB4', '#FFAA70', '#FFDF70'],
-        opacity=0.25,
+        opacity=0.15,
         hovertext=['AGN Types', 'Supernovae', 'Pulsating', 'Other', 'Extrinisc Variability'],
-        hoverinfo='text'
+        hoverinfo='text',
+        name='Groupings'
     ))
 
+    #delas with lasair
+    if lasair_tcs:#checks to make sure there are lasair classifications
+        tc = lasair_tcs[len(lasair_tcs)-1]
+        las_cat = ''
+        las_prob = 0
+        lasair_table=[#table of equivs
+            ['VS', 'CV', 'SN', 'ORPHAN', 'AGN', 'NT'],
+            ['RR Lyrae', 'CV/Nova', 'SNII', 'Unknown', 'Quasar', 'AGN Other'],
+            [5, 1, 5, 1, 3, 1],
+        ]
+        try:
+            i = lasair_table[0].index(tc.classification)
+            las_cat = lasair_table[1][i]
+            las_prob = tc.probability
+            las_width = lasair_table[2][i]
+        except:
+            las_width = 0
+        fig.add_trace(go.Barpolar(
+            name="Lasair",
+            r=[las_prob],
+            theta=[las_cat],
+            width=[las_width],
+            marker= dict(line_width=2, line_color='green', color='rgba(0,0,0,0)',),
+            base=0,
+            hovertext=['Lasair: ' + tc.classification],
+            hoverinfo='text',
+        ))
+    # deals with alerce
     alerce_stamp_cats = []
     alerce_stamp_probs = []
     alerce_stamp_widths = []
@@ -262,6 +291,7 @@ def classif_plot(target, width=700, height=700, background=None, label_color=Non
         r=alerce_stamp_probs,
         theta=alerce_stamp_cats,
         width=alerce_stamp_widths,
+        marker_color='#8E44AD',
         marker_line_color="black",
         marker_line_width=2,
         opacity=0.8,
@@ -296,45 +326,34 @@ def classif_plot(target, width=700, height=700, background=None, label_color=Non
             name='ALeRCE LC',
             r=alerce_lc_probs,
             theta=alerce_lc_cats,
-            marker_line_color="black",
-            marker_line_width=2,
+            line=dict(color='#BB8FCE', width=2),
             opacity=0.8,
-            
-        ))
-    #delas with lasair
-    if lasair_tcs:#checks to make sure there are lasair classifications
-        tc = lasair_tcs[len(lasair_tcs)-1]
-        las_cat = ''
-        las_prob = 0
-        lasair_table=[#table of equivs
-            ['VS', 'CV', 'SN', 'ORPHAN', 'AGN', 'NT'],
-            ['RR Lyrae', 'CV/Nova', 'SNII', 'Unknown', 'Quasar', 'AGN Other'],
-            [5, 1, 5, 1, 3, 1],
-        ]
-        try:
-            i = lasair_table[0].index(tc.classification)
-            las_cat = lasair_table[1][i]
-            las_prob = tc.probability
-            las_width = lasair_table[2][i]
-        except:
-            las_width = 0
-        fig.add_trace(go.Barpolar(
-            name="Lasair",
-            r=[las_prob],
-            theta=[las_cat],
-            width=[las_width],
-            marker_line_width=2,
-            marker_line_color='green',
-            marker_color='#FFFFFF',
-            opacity=0.5,
-            base=0,
-            hovertext=['Lasair: ' + tc.classification],
-            hoverinfo='text',
         ))
     
     #deals with fink,
-    
-
+    if fink_tcs:
+        fink_cats = []
+        fink_probs = []
+        fink_table = [#this had not been updated for fink
+            ['QSO', 'mulens', 'sso', 'KN'],#what the classification is
+            ['Quasar', 'Microlensing', 'Solar System Object', 'SN Other'],#where to point the bar
+        ]
+        for tc in fink_tcs:
+            try:
+                i = fink_table[0].index(tc.classification)
+                fink_cats.append(fink_table[1][i])
+                fink_probs.append(tc.probability)
+            except:
+                fink_cats.append(tc.classification)
+                fink_probs.append(tc.probability)
+        fig.add_trace(go.Scatterpolar(
+            name='Fink',
+            r=fink_probs,
+            theta=fink_cats,
+            line=dict(color='#EB984E', width=2),
+            opacity=0.8,
+        ))
+        print(fink_probs)
 
 
     fig.update_layout(
@@ -350,6 +369,27 @@ def classif_plot(target, width=700, height=700, background=None, label_color=Non
                 )
         )
     )
+    ring_prob = [None, 0.15, 0.05, 0.75, 0.05, 0]
+    to_add = [
+        ['Quasar'],
+        ['AGN'],
+        [5],
+        [.85]
+    ]
+    fig =go.Figure(go.Sunburst(
+        labels=[target.name, 'Extrinsic Variability', 'Supernova', 'AGN', 'Pulsating', 'Other'] + to_add[0],
+        parents=['', target.name,  target.name, target.name, target.name, target.name, ] + to_add[1],
+        values=[None, 14, 12, 10, 2, 6] + to_add[2],
+        marker=dict(
+            colors=ring_prob + to_add[3],
+            colorscale='Greens',
+            cmid=0.5),
+            hovertemplate='<b>%{label} </b> <br> Probability: %{color}',
+    ))
+    fig.update_layout(
+        margin = dict(t=0, l=0, r=0, b=0),
+        height=height,
+        width=width,)
 
     plot_out = offline.plot(
         fig, output_type='div', show_link=False
