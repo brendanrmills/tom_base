@@ -131,15 +131,17 @@ class LasairBroker(GenericBroker):
         if 'objectId' in parameters and len(parameters['objectId'].strip()) > 0:
             query = {
             'limit': 1,
-            'token': settings.BROKER['Lasair'],
+            "token":"1ce34af3a313684e90eb86ccc22565ae33434e0f",
+            'tables': 'objects, sherlock_classifications',
+            # 'token': str(settings.BROKERS['Lasair']),
             'objectIds': parameters['objectId'],
             'format': 'json',
             }
             url = LASAIR_URL + '/objects/?' + urlencode(query)
             response = requests.get(url)
             response.raise_for_status()
-            alerts = response.json()
-            return iter(alerts)
+            alert = response.json()
+            return alert
 
         if 'mjd__gt' in parameters and 'mjd__lt' in parameters:
             query = {
