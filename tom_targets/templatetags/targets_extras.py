@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-
+import json
 from astroplan import moon_illumination
 from astropy import units as u
 from astropy.coordinates import Angle, get_moon, SkyCoord
@@ -226,11 +226,14 @@ def classif_plot(target, width=700, height=700, background=None, label_color=Non
     Displays the classification data for a target
     """
     tcs = target.targetclassification_set.all()
-    alerce_tcs = tcs.filter(source='ALeRCE')
+    alerce_lc_tcs = tcs.filter(level='lc_classifier')
+    alerce_stamp_tcs= tcs.filter(level='stamp_classifier_1.0.4')
+    if len(alerce_stamp_tcs) == 0:
+        alerce_stamp_tcs = tcs.filter(level='stamp_classifier_1.0.0')
     lasair_tcs = tcs.filter(source='Lasair')
     fink_tcs = tcs.filter(source='Fink')
 
-    objs = ['Bogus', 'Asteroid', 'Solar System Object', 'YSO', 'CV/Nova', 'Microlensing', 'Eclipsing Binary', 'Rotating', 'SNIa', 'SNIb/c', 'SNII', 'SLSN', 'SN Other', 'Blazar', 'Quasar', 'AGN Other', 'LPV', 'Cepheid', 'RR Lyrae', 'del Scuti', 'Pulsating Other', 'Other', 'Unknown']
+    objs = ['Bogus', 'Asteroid', 'Solar System Object', 'YSO', 'CV/Nova', 'Microlensing', 'Eclipsing Binary', 'Rotating', 'SNIa', 'SNIb/c', 'SNII', 'SLSN', 'SN Other', 'Blazar', 'Quasar', 'AGN Other', 'LPV', 'Cepheid', 'RR Lyrae', 'del Scuti', 'Variable Other', 'Other', 'Unknown']
     fig = go.Figure(go.Barpolar(
         r=[1,1,1,1,1],
         theta=['Quasar', 'SNII', 'RR Lyrae', 'Bogus', 'Microlensing'],
@@ -241,27 +244,59 @@ def classif_plot(target, width=700, height=700, background=None, label_color=Non
         hoverinfo='text',
         name='Groupings'
     ))
+    fig.add_trace(go.Barpolar(
+        r=[.1,.1,.1,.1,.1],
+        theta=['Quasar', 'SNII', 'RR Lyrae', 'Bogus', 'Microlensing'],
+        width=[3, 5, 5, 5, 5],
+        marker_color=["#E4FF87", '#709BFF', '#B6FFB4', '#FFAA70', '#FFDF70'],
+        opacity=0.8,
+        hovertext=['AGN Types', 'Supernovae', 'Pulsating', 'Other', 'Extrinisc Variability'],
+        hoverinfo='text',
+        name='Groupings',
+        base=np.ones(5)
+    ))
+    mapping_dict = {#this dictionary provides mappinf from the broker classifications to the diagram wedges
+        #Lasair classifs
+        'Lasair VS': ('RR Lyrae', 5),
+        'Lasair CV': ('CV/Nova', 1),
+        'Lasair SN': ('SNII', 5),
+        'Lasair ORPHAN': ('Unknown', 1),
+        'Lasair AGN': ('Quasar', 3),
+        'Lasair NT': ('AGN Other', 1),
+        'ALeRCEs bogus': ('Bogus', 1),
+        'ALeRCEs asteroid': ('Asteroid', 1),
+        'ALeRCEs VS': ('RR Lyrae', 5),
+        'ALeRCEs SN': ('SNII', 5),
+        'ALeRCEs AGN': ('Quasar', 3),
+        'ALeRCE E': 'Eclipsing Binary',
+        'ALeRCE RRL': 'RR Lyrae',
+        'ALeRCE DSCT': 'del Scuti',
+        'ALeRCE CEP': 'Cepheid',
+        'ALeRCE QSO': 'Quasar',
+        'ALeRCE Not classified': 'Unknown',
+        'ALeRCE AGN': 'AGN Other',
+        'ALeRCE SNIbc': 'SNIb/c',
+        'ALeRCE Periodic-Other': 'Variable Other',
+        'Fink fink_mulens': 'Microlensing',
+        'Fink fink_sso': 'Solar System Object',
+        'Fink fink_KN': 'SN Other',
+        'Fink QSO': 'Quasar',
+        'Fink EB*': 'Eclipsing Binary',
+        'Fink fink_SNIa': 'SNIa'
 
+    }
+    with open('/home/bmills/bmillsWork/tom_test/tom_base/tom_targets/templatetags/classif_printout.txt') as json_file:
+        data = json.load(json_file)
+    mapping_dict.update(data)
     #delas with lasair
     if lasair_tcs:#checks to make sure there are lasair classifications
         tc = lasair_tcs[len(lasair_tcs)-1]
-        las_cat = ''
-        las_prob = 0
-        lasair_table=[#table of equivs
-            ['VS', 'CV', 'SN', 'ORPHAN', 'AGN', 'NT'],
-            ['RR Lyrae', 'CV/Nova', 'SNII', 'Unknown', 'Quasar', 'AGN Other'],
-            [5, 1, 5, 1, 3, 1],
-        ]
-        try:
-            i = lasair_table[0].index(tc.classification)
-            las_cat = lasair_table[1][i]
-            las_prob = tc.probability
-            las_width = lasair_table[2][i]
-        except:
-            las_width = 0
+        las_cat = mapping_dict[tc.source + ' ' + tc.classification][0]
+        las_prob = tc.probability
+        las_width = mapping_dict[tc.source + ' ' + tc.classification][1]
         fig.add_trace(go.Barpolar(
             name="Lasair",
-            r=[las_prob],
+            r=[1],
             theta=[las_cat],
             width=[las_width],
             marker= dict(line_width=2, line_color='green', color='rgba(0,0,0,0)',),
@@ -269,83 +304,73 @@ def classif_plot(target, width=700, height=700, background=None, label_color=Non
             hovertext=['Lasair: ' + tc.classification],
             hoverinfo='text',
         ))
-    # deals with alerce
+    # deals with alerce stamp 
     alerce_stamp_cats = []
     alerce_stamp_probs = []
     alerce_stamp_widths = []
-    stamp_table = [
-        ['bogus', 'asteroid', 'SN', 'AGN', 'VS'],#what the classification is
-        ['Bogus', 'Asteroid', 'SNII', 'Quasar', 'RR Lyrae'],#where to point the bar
-        [1,1,5,3,5]#how thick to make the bar
-    ]
-    for tc in alerce_tcs.filter(level='stamp_classifier'):
-        try:
-            i = stamp_table[0].index(tc.classification)
-            alerce_stamp_cats.append(stamp_table[1][i])
-            alerce_stamp_widths.append(stamp_table[2][i])
-            alerce_stamp_probs.append(tc.probability)
-        except:
-            pass
+    for tc in alerce_stamp_tcs:
+        alerce_stamp_cats.append(mapping_dict[tc.source + 's ' + tc.classification][0])
+        alerce_stamp_widths.append(mapping_dict[tc.source + 's ' + tc.classification][1])
+        alerce_stamp_probs.append(tc.probability)
+
     fig.add_trace(go.Barpolar(#alerce stamp bar chart
         name='ALeRCE Stamp',
         r=alerce_stamp_probs,
         theta=alerce_stamp_cats,
         width=alerce_stamp_widths,
-        marker_color='#8E44AD',
+        marker_color='#BB8FCE',
         marker_line_color="black",
         marker_line_width=2,
         opacity=0.8,
         base=0,
         ))
 
-    bogus_or_asteroid = True
-    if alerce_stamp_probs and alerce_stamp_cats[np.argmax(alerce_stamp_probs)] != 'asteroid' and alerce_stamp_cats[np.argmax(alerce_stamp_probs)] != 'bogus':
-        bogus_or_asteroid = False    #this means it isnt bogus or an asteroid
-        #this next section picks out from hte top classifier whether it is periodic, stochastic or transient
-        lc_top= ''
-        lc_top_prob = 0
-        for tc in tcs.filter(level='lc_classifier_top'):
-            if tc.probability > lc_top_prob:
-                lc_top = tc.classification
-                lc_top_prob = tc.probability
-        alerce_lc_cats = []
-        alerce_lc_probs = []
-        lc_table = [
-            ['E', 'DSCT', 'RRL', 'CEP', 'QSO', 'AGN', 'SNIbc', 'Periodic-Other'],#what the classification is
-            ['Eclipsing Binary', 'del Scuti', 'RR Lyrae', 'Cepheid', 'Quasar', 'AGN Other', 'SNIb/c', 'Pulsating Other'],#where to point the bar
-        ]
-        for tc in tcs.filter(level='lc_classifier'):
-            try:
-                i = lc_table[0].index(tc.classification)
-                alerce_lc_cats.append(lc_table[1][i])
-                alerce_lc_probs.append(tc.probability)
-            except:
-                alerce_lc_cats.append(tc.classification)
-                alerce_lc_probs.append(tc.probability)
-        fig.add_trace(go.Scatterpolar(
-            name='ALeRCE LC',
-            r=alerce_lc_probs,
-            theta=alerce_lc_cats,
-            line=dict(color='#BB8FCE', width=2),
-            opacity=0.8,
-        ))
+    #does alerce lc
+    alerce_lc_cats = []
+    alerce_lc_probs = []
+    for tc in alerce_lc_tcs:
+        try:
+            alerce_lc_cats.append(mapping_dict[tc.source + ' ' + tc.classification])
+            alerce_lc_probs.append(tc.probability)
+        except:
+            alerce_lc_cats.append(tc.classification)
+            alerce_lc_probs.append(tc.probability)
+    lc_out = []
+    lc_out_p = []
+    for o in objs:#this reorders the list to make the output nicer
+        try:
+            i = alerce_lc_cats.index(o)
+            lc_out.append(alerce_lc_cats[i])
+            lc_out_p.append(alerce_lc_probs[i])
+        except:
+            pass
+    fig.add_trace(go.Scatterpolar(
+        name='ALeRCE LC',
+        r=lc_out_p,
+        theta=lc_out,
+        line=dict(color='#8E44AD', width=2),
+        opacity=0.8,
+        fill = 'toself'
+    ))
     
     #deals with fink,
     if fink_tcs:
+        tc = fink_tcs[len(fink_tcs)-1]
+        candidate = 'Candidate' in tc.classification or 'candidate' in tc.classification
         fink_cats = []
         fink_probs = []
-        fink_table = [#this had not been updated for fink
-            ['QSO', 'mulens', 'sso', 'KN'],#what the classification is
-            ['Quasar', 'Microlensing', 'Solar System Object', 'SN Other'],#where to point the bar
-        ]
         for tc in fink_tcs:
             try:
-                i = fink_table[0].index(tc.classification)
-                fink_cats.append(fink_table[1][i])
+                fink_cats.append(mapping_dict[tc.source + ' ' + tc.classification])
                 fink_probs.append(tc.probability)
             except:
                 fink_cats.append(tc.classification)
                 fink_probs.append(tc.probability)
+            if fink_cats[-1] in ['Other', 'AGN Other', 'Variable Other', 'SN Other'] and fink_probs[-1]>0.5:
+                fig.add_annotation(x=-0.1,y=1.1,
+                text='Fink Classification: ' + tc.classification,
+                showarrow=False,
+                )
         fig.add_trace(go.Scatterpolar(
             name='Fink',
             r=fink_probs,
@@ -353,7 +378,6 @@ def classif_plot(target, width=700, height=700, background=None, label_color=Non
             line=dict(color='#EB984E', width=2),
             opacity=0.8,
         ))
-        print(fink_probs)
 
 
     fig.update_layout(
@@ -369,27 +393,27 @@ def classif_plot(target, width=700, height=700, background=None, label_color=Non
                 )
         )
     )
-    ring_prob = [None, 0.15, 0.05, 0.75, 0.05, 0]
-    to_add = [
-        ['Quasar'],
-        ['AGN'],
-        [5],
-        [.85]
-    ]
-    fig =go.Figure(go.Sunburst(
-        labels=[target.name, 'Extrinsic Variability', 'Supernova', 'AGN', 'Pulsating', 'Other'] + to_add[0],
-        parents=['', target.name,  target.name, target.name, target.name, target.name, ] + to_add[1],
-        values=[None, 14, 12, 10, 2, 6] + to_add[2],
-        marker=dict(
-            colors=ring_prob + to_add[3],
-            colorscale='Greens',
-            cmid=0.5),
-            hovertemplate='<b>%{label} </b> <br> Probability: %{color}',
-    ))
-    fig.update_layout(
-        margin = dict(t=0, l=0, r=0, b=0),
-        height=height,
-        width=width,)
+    # ring_prob = [None, 0.15, 0.05, 0.75, 0.05, 0]
+    # to_add = [
+    #     ['Quasar'],
+    #     ['AGN'],
+    #     [5],
+    #     [.85]
+    # ]
+    # fig =go.Figure(go.Sunburst(
+    #     labels=[target.name, 'Extrinsic Variability', 'Supernova', 'AGN', 'Pulsating', 'Other'] + to_add[0],
+    #     parents=['', target.name,  target.name, target.name, target.name, target.name, ] + to_add[1],
+    #     values=[None, 14, 12, 10, 2, 6] + to_add[2],
+    #     marker=dict(
+    #         colors=ring_prob + to_add[3],
+    #         colorscale='Greens',
+    #         cmid=0.5),
+    #         hovertemplate='<b>%{label} </b> <br> Probability: %{color}',
+    # ))
+    # fig.update_layout(
+    #     margin = dict(t=0, l=0, r=0, b=0),
+    #     height=height,
+    #     width=width,)
 
     plot_out = offline.plot(
         fig, output_type='div', show_link=False
