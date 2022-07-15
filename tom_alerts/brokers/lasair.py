@@ -132,12 +132,14 @@ class LasairBroker(GenericBroker):
             query = {
             'limit': 1,
             "token":"1ce34af3a313684e90eb86ccc22565ae33434e0f",
+            "token": settings.BROKERS['Lasair']['lasair_token'],
             'tables': 'objects, sherlock_classifications',
             # 'token': str(settings.BROKERS['Lasair']),
             'objectIds': parameters['objectId'],
             'format': 'json',
             }
             url = LASAIR_URL + '/objects/?' + urlencode(query)
+            print(url)
             response = requests.get(url)
             response.raise_for_status()
             alert = response.json()
@@ -146,7 +148,7 @@ class LasairBroker(GenericBroker):
         if 'mjd__gt' in parameters and 'mjd__lt' in parameters:
             query = {
                 'selected': 'objects.objectId, objects.ramean, objects.decmean, objects.jdmax, sherlock_classifications.classification, sherlock_classifications.classificationReliability',
-                "token":"1ce34af3a313684e90eb86ccc22565ae33434e0f",
+                "token":settings.BROKERS['Lasair']['lasair_token'],
                 'tables': 'objects, sherlock_classifications',
                 'conditions': f'objects.jdmax>{ parameters["mjd__gt"] + 2400000 } AND objects.jdmax<{parameters["mjd__lt"] + 2400000}',
                 'limit': parameters.get('max_alerts',20),
