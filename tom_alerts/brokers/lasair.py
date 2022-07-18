@@ -139,7 +139,6 @@ class LasairBroker(GenericBroker):
             'format': 'json',
             }
             url = LASAIR_URL + '/objects/?' + urlencode(query)
-            print(url)
             response = requests.get(url)
             response.raise_for_status()
             alert = response.json()
