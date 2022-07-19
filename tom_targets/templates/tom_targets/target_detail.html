@@ -103,7 +103,8 @@ $(document).ready(function(){
       </div>
       <div class="tab-pane active" id="classifications">
         <h4>Classifications</h4>
-        {% classif_plot object %}
+        {% classif_sun object %}
+        {% classif_scatter object %}
       </div>
       {% comments_enabled as comments_are_enabled %}
       <hr/>
