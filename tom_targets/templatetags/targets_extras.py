@@ -275,26 +275,37 @@ def classif_sun(target, width=700, height=700, background=None, label_color=None
         'DSCT': 'dS*',
         'RRL': 'RR*',
         'CEP': 'Ce*',
-        'Perodic Other': 'Pu*',
+        'Periodic-Other': 'Pu*',
     }
     for tc in alerce_lc_tcs:
         codes.append( (allc_codes.get(tc.classification), 'Alerce LC', tc.probability))
         
     #deals with fink,
     fink_codes = {
-        'Tracklet': 'trk',
-        'Solar System MPC': 'MPC',
-        'Solar System candidate': 'SSO',
-        'SN candidate': 'SN*',
-        'Early SN Ia candidate': 'SNIa',
-        'Microlensing candidate': 'Lev',
-        'Kilonova candidate': 'KN',
-        'fink_mulens': 'Lev',
-        'fink_sso': 'SSO',
-        'fink_KN': 'KN',
-        'fink_SNIa': 'SNIa',
-
-    }
+            'Tracklet': 'trk',
+            'Solar System MPC': 'MPC',
+            'Solar System candidate': 'SSO',
+            'SN candidate': 'SN*',
+            'Early SN Ia candidate': 'SNIa',
+            'Microlensing candidate': 'Lev',
+            'Kilonova candidate': 'KN',
+            'mulens': 'Lev',
+            'sso': 'SSO',
+            'KN': 'KN',
+            'SNIa': 'SNIa',
+            'fink_mulens': 'Lev',
+            'fink_sso': 'SSO',
+            'fink_KN': 'KN',
+            'fink_SNIa': 'SNIa',
+            'FIR': 'FIR',
+            'MIR': 'MIR',
+            'NIR': 'NIR',
+            'Ambiguous': 'abi',
+            'Fail 503': 'err',
+            'Unknown_Candidate': '?',
+            'BSG*_Candidate': 's*b',
+            'GlCl?_Candidate': 'GlC,'
+        }
     with open('/home/bmills/bmillsWork/tom_test/mytom/SIMBAD_otypes_labels.txt') as f:
         for line in f:
             [_, code, old, new] = line.split('|')
@@ -309,7 +320,7 @@ def classif_sun(target, width=700, height=700, background=None, label_color=None
     with open('/home/bmills/bmillsWork/tom_test/mytom/variability.txt') as json_file:
         parents_dict = json.load(json_file)
 
-    labels = ['Alert']
+    labels = ['~Alert']
     parents = ['']
     values = [None]
     colors = [0]
@@ -319,14 +330,14 @@ def classif_sun(target, width=700, height=700, background=None, label_color=None
         if confidence < 0.01:
             continue
         lineage = [(code_walker, confidence)]
-        while code_walker and code_walker != 'Alert':#this loop builds the lineage
+        while code_walker and code_walker != '~Alert':#this loop builds the lineage
             code_walker = parents_dict[code_walker]
             lineage.append( (code_walker, confidence) )
         lineage.append(('',-1))
         for l in lineage:
             if not l[0]:
                 break
-            if l[0] == 'Alert':
+            if l[0] == '~Alert':
                 continue
             if l[0] in labels:
                 colors[labels.index(l[0])] += l[1]
@@ -399,7 +410,7 @@ def classif_scatter(target, width=700, height=700, background=None, label_color=
         hoverinfo='text',
         base=np.ones(6)
     ))
-    objs = ['SNIa', 'SNIbc', 'SNII', 'SLSN', 'SN*', 'QSO', 'AGN', 'G*', 'LP*', 'Ce*', 'RR*', 'dS*', 'Pu*', 'EB*', 'CV*', '**',  'Y*O', 'Er*', 'Ro*', 'V*', 'ast', 'grv', 'Other', 'Alert']
+    objs = ['SNIa', 'SNIbc', 'SNII', 'SLSN', 'SN*', 'QSO', 'AGN', 'G*', 'LP*', 'Ce*', 'RR*', 'dS*', 'Pu*', 'EB*', 'CV*', '**',  'Y*O', 'Er*', 'Ro*', 'V*', 'ast', 'grv', 'Other', '~Alert']
     
     #delas with lasair
     las_codes = {#still need to handle bright star
@@ -506,18 +517,30 @@ def classif_scatter(target, width=700, height=700, background=None, label_color=
 
     #deals with fink,
     fink_codes = {
-        'Tracklet': 'trk',
-        'Solar System MPC': 'MPC',
-        'Solar System candidate': 'SSO',
-        'SN candidate': 'SN*',
-        'Early SN Ia candidate': 'SNIa',
-        'Microlensing candidate': 'Lev',
-        'Kilonova candidate': 'KN',
-        'fink_mulens': 'Lev',
-        'fink_sso': 'SSO',
-        'fink_KN': 'KN',
-        'fink_SNIa': 'SNIa',
-    }
+            'Tracklet': 'trk',
+            'Solar System MPC': 'MPC',
+            'Solar System candidate': 'SSO',
+            'SN candidate': 'SN*',
+            'Early SN Ia candidate': 'SNIa',
+            'Microlensing candidate': 'Lev',
+            'Kilonova candidate': 'KN',
+            'mulens': 'Lev',
+            'sso': 'SSO',
+            'KN': 'KN',
+            'SNIa': 'SNIa',
+            'fink_mulens': 'Lev',
+            'fink_sso': 'SSO',
+            'fink_KN': 'KN',
+            'fink_SNIa': 'SNIa',
+            'FIR': 'FIR',
+            'MIR': 'MIR',
+            'NIR': 'NIR',
+            'Ambiguous': 'abi',
+            'Fail 503': 'err',
+            'Unknown_Candidate': '?',
+            'BSG*_Candidate': 's*b',
+            'GlCl?_Candidate': 'GlC,'
+        }
     with open('/home/bmills/bmillsWork/tom_test/mytom/SIMBAD_otypes_labels.txt') as f:
         for line in f:
             [_, code, old, new] = line.split('|')
