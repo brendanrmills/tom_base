@@ -231,17 +231,13 @@ def classif_sun(target, width=700, height=700, background=None, label_color=None
     lasair_tcs = tcs.filter(source='Lasair')
     fink_tcs = tcs.filter(source='Fink')
 
-    #delas with lasair
-    las_codes = {#still need to handle bright star
-        'VS': 'V*',
-        'CV': 'CV*',
-        'SN': 'SN*',
-        'ORPHAN': '?',
-        'AGN': 'AGN',
-        'NT': 'Transient',
-        'UNCLEAR': '?',
-        # 'BS':
-    }
+    with open('/home/bmills/bmillsWork/tom_test/mytom/broker_codes.txt') as json_file:#this loads the parentage dictionary that I made
+        big_codes_dict = json.load(json_file)
+    las_codes = big_codes_dict['las_codes']
+    alst_codes = big_codes_dict['alerce_stamp_codes']
+    allc_codes = big_codes_dict['alerce_lc_codes']
+    fink_codes = big_codes_dict['fink_codes']
+
     codes = []
     if lasair_tcs:
         tc = lasair_tcs[len(lasair_tcs)-1]
@@ -249,63 +245,14 @@ def classif_sun(target, width=700, height=700, background=None, label_color=None
         codes.append( (l_code, 'Lasair', tc.probability) )
 
     # deals with alerce stamp
-    alst_codes = {
-        'SN': 'SN*',
-        'AGN': 'AGN',
-        'VS': 'V*',
-        'bogus': 'err',
-        'asteroid': 'ast',
-    } 
     for tc in alerce_stamp_tcs:
         codes.append( (alst_codes.get(tc.classification), 'Alerce stamp', tc.probability))
 
     #does alerce lc
-    allc_codes = {
-        'SNIa': 'SNIa',
-        'SNIbc': 'SNIbc',
-        'SNII': 'SNII',
-        'SLSN': 'SLSN',
-        'QSO': 'QSO',
-        'AGN': 'AGN',
-        'Blazar': 'Bla',
-        'CV/Nova': 'CV*',
-        'YSO': 'Y*O',
-        'LPV': 'LP*',
-        'E': 'EB*',
-        'DSCT': 'dS*',
-        'RRL': 'RR*',
-        'CEP': 'Ce*',
-        'Periodic-Other': 'Pu*',
-    }
     for tc in alerce_lc_tcs:
         codes.append( (allc_codes.get(tc.classification), 'Alerce LC', tc.probability))
         
-    #deals with fink,
-    fink_codes = {
-            'Tracklet': 'trk',
-            'Solar System MPC': 'MPC',
-            'Solar System candidate': 'SSO',
-            'SN candidate': 'SN*',
-            'Early SN Ia candidate': 'SNIa',
-            'Microlensing candidate': 'Lev',
-            'Kilonova candidate': 'KN',
-            'mulens': 'Lev',
-            'sso': 'SSO',
-            'KN': 'KN',
-            'SNIa': 'SNIa',
-            'fink_mulens': 'Lev',
-            'fink_sso': 'SSO',
-            'fink_KN': 'KN',
-            'fink_SNIa': 'SNIa',
-            'FIR': 'FIR',
-            'MIR': 'MIR',
-            'NIR': 'NIR',
-            'Ambiguous': 'abi',
-            'Fail 503': 'err',
-            'Unknown_Candidate': '?',
-            'BSG*_Candidate': 's*b',
-            'GlCl?_Candidate': 'GlC,'
-        }
+    #deals with fink
     with open('/home/bmills/bmillsWork/tom_test/mytom/SIMBAD_otypes_labels.txt') as f:
         for line in f:
             [_, code, old, new] = line.split('|')
@@ -412,18 +359,13 @@ def classif_scatter(target, width=700, height=700, background=None, label_color=
     ))
     objs = ['SNIa', 'SNIbc', 'SNII', 'SLSN', 'SN*', 'QSO', 'AGN', 'G*', 'LP*', 'Ce*', 'RR*', 'dS*', 'Pu*', 'EB*', 'CV*', '**',  'Y*O', 'Er*', 'Ro*', 'V*', 'ast', 'grv', 'Other', '~Alert']
     
+    with open('/home/bmills/bmillsWork/tom_test/mytom/broker_codes.txt') as json_file:#this loads the parentage dictionary that I made
+        big_codes_dict = json.load(json_file)
+    las_codes = big_codes_dict['las_codes']
+    alst_codes = big_codes_dict['alerce_stamp_codes']
+    allc_codes = big_codes_dict['alerce_lc_codes']
+    fink_codes = big_codes_dict['fink_codes']
     #delas with lasair
-    las_codes = {#still need to handle bright star
-        'VS': 'V*',
-        'CV': 'CV*',
-        'SN': 'SN*',
-        'ORPHAN': '?',
-        'AGN': 'AGN',
-        'NT': 'Transient',
-        'UNCLEAR': '?',
-        # 'BS':
-    }
-    
     if lasair_tcs:
         tc = lasair_tcs[len(lasair_tcs)-1]
         code_walker = las_codes[tc.classification]
@@ -443,13 +385,6 @@ def classif_scatter(target, width=700, height=700, background=None, label_color=
         ))
     
     # deals with alerce stamp
-    alst_codes = {
-        'SN': 'SN*',
-        'AGN': 'AGN',
-        'VS': 'V*',
-        'bogus': 'err',
-        'asteroid': 'ast',
-    }
     alst_list = []
     alst_probs = []
     for tc in alerce_stamp_tcs:
@@ -472,23 +407,6 @@ def classif_scatter(target, width=700, height=700, background=None, label_color=
         ))
 
     #does alerce lc
-    allc_codes = {
-        'SNIa': 'SNIa',
-        'SNIbc': 'SNIbc',
-        'SNII': 'SNII',
-        'SLSN': 'SLSN',
-        'QSO': 'QSO',
-        'AGN': 'AGN',
-        'Blazar': 'Bla',
-        'CV/Nova': 'CV*',
-        'YSO': 'Y*O',
-        'LPV': 'LP*',
-        'E': 'EB*',
-        'DSCT': 'dS*',
-        'RRL': 'RR*',
-        'CEP': 'Ce*',
-        'Periodic-Other': 'Pu*',
-    }
     alerce_lc_cats = []
     alerce_lc_probs = []
     for tc in alerce_lc_tcs:
@@ -516,31 +434,6 @@ def classif_scatter(target, width=700, height=700, background=None, label_color=
         fill = 'toself'))
 
     #deals with fink,
-    fink_codes = {
-            'Tracklet': 'trk',
-            'Solar System MPC': 'MPC',
-            'Solar System candidate': 'SSO',
-            'SN candidate': 'SN*',
-            'Early SN Ia candidate': 'SNIa',
-            'Microlensing candidate': 'Lev',
-            'Kilonova candidate': 'KN',
-            'mulens': 'Lev',
-            'sso': 'SSO',
-            'KN': 'KN',
-            'SNIa': 'SNIa',
-            'fink_mulens': 'Lev',
-            'fink_sso': 'SSO',
-            'fink_KN': 'KN',
-            'fink_SNIa': 'SNIa',
-            'FIR': 'FIR',
-            'MIR': 'MIR',
-            'NIR': 'NIR',
-            'Ambiguous': 'abi',
-            'Fail 503': 'err',
-            'Unknown_Candidate': '?',
-            'BSG*_Candidate': 's*b',
-            'GlCl?_Candidate': 'GlC,'
-        }
     with open('/home/bmills/bmillsWork/tom_test/mytom/SIMBAD_otypes_labels.txt') as f:
         for line in f:
             [_, code, old, new] = line.split('|')
