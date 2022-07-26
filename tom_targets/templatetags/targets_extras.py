@@ -447,12 +447,13 @@ def classif_scatter(target, width=700, height=700, background=None, label_color=
         offset = 0
         for tc in fink_tcs:
             if tc.probability < 0.01:
+                fink_cats.append('~Alert')
+                fink_probs.append(0)
                 continue
             candidate = 'Candidate' in tc.classification or 'candidate' in tc.classification
             if candidate:
                 fig.add_annotation(x=1,y=.98,text='This is a candidate target',showarrow=False)
             code_walker = fink_codes[tc.classification]
-            print(tc.classification)
             while not code_walker in objs:
                 code_walker = parents_dict[code_walker]
             if not code_walker == fink_codes[tc.classification]:
@@ -467,7 +468,8 @@ def classif_scatter(target, width=700, height=700, background=None, label_color=
             r=fink_probs,
             theta=fink_cats,
             line=dict(color='#EB984E', width=2),
-            opacity=0.8,))
+            opacity=0.8,
+            marker_size=10))
     fig.update_layout(
         template=None,
         height=800,
